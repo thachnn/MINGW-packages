@@ -1,0 +1,17 @@
+diff -Nru1 freetype-2.13.0.orig/builds/unix freetype-2.13.0/builds/unix
+--- freetype-2.13.0.orig/builds/unix/configure	2023-02-09 06:33:17.000000000 +0000
++++ freetype-2.13.0/builds/unix/configure	2023-04-27 12:55:50.913657700 +0000
+@@ -16440,3 +16440,3 @@
+ PKGCONFIG_REQUIRES=
+-PKGCONFIG_LIBS='-L${libdir} -lfreetype'
++PKGCONFIG_LIBS='-L$${libdir} -lfreetype'
+ 
+--- freetype-2.13.0.orig/builds/unix/unix-def.in	2023-02-04 14:00:05.000000000 +0000
++++ freetype-2.13.0/builds/unix/unix-def.in	2023-04-27 13:09:26.485510900 +0000
+@@ -148,4 +148,4 @@
+ 	    -e 's|%ft_version%|$(ft_version)|'                                 \
+-	    -e 's|%includedir%|$(includedir_x)|'                               \
+-	    -e 's|%libdir%|$(libdir_x)|'                                       \
++	    -e 's|%includedir%|$@includedir@|'                                 \
++	    -e 's|%libdir%|$@libdir@|'                                         \
+ 	    -e 's|%prefix%|$(prefix_x)|'                                       \

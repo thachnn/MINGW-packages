@@ -1,19 +1,21 @@
 # Maintainer: Alexey Pavlov <alexpux@gmail.com>
 # Contributor: Renato Silva <br.renatosilva@gmail.com>
+# Contributor: Thach Nguyen (github.com/thachnn)
 
 _with_harfbuzz="yes"
 
 _realname=freetype
 pkgbase=mingw-w64-${_realname}
 pkgname="${MINGW_PACKAGE_PREFIX}-${_realname}"
-pkgver=2.13.0
+_ver=2.13.0
+[ "${_with_harfbuzz}" == "yes" ] && pkgver=$_ver || pkgver="$_ver.noharfbuzz"
 pkgrel=1
 pkgdesc="TrueType font rendering library (mingw-w64)"
 arch=('any')
 mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64' 'clang32' 'clangarm64')
 url="https://www.freetype.org/"
 license=('spdx:GPL-2.0-or-later OR FTL')
-depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs"
+depends=(
          "${MINGW_PACKAGE_PREFIX}-brotli"
          "${MINGW_PACKAGE_PREFIX}-bzip2"
          "${MINGW_PACKAGE_PREFIX}-libpng"
@@ -21,19 +23,17 @@ depends=("${MINGW_PACKAGE_PREFIX}-gcc-libs"
 if [ "${_with_harfbuzz}" == "yes" ]; then
   depends+=("${MINGW_PACKAGE_PREFIX}-harfbuzz")
 fi
-makedepends=("${MINGW_PACKAGE_PREFIX}-meson"
-             "${MINGW_PACKAGE_PREFIX}-ninja"
-             "${MINGW_PACKAGE_PREFIX}-pkgconf"
+makedepends=("${MINGW_PACKAGE_PREFIX}-pkg-config"
              "${MINGW_PACKAGE_PREFIX}-cc")
-source=(https://download-mirror.savannah.gnu.org/releases/freetype//freetype-${pkgver}.tar.xz{,.sig}
-        freetype-2.10.0-enable-valid.patch
-        freetype-2.10.0-enable-spr.patch
-        https://gitlab.freedesktop.org/freetype/freetype/-/merge_requests/253.patch)
+source=(https://download-mirror.savannah.gnu.org/releases/freetype/${_realname}-${_ver}.tar.xz{,.sig}
+        https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-freetype/freetype-2.10.0-enable-valid.patch
+        https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-freetype/freetype-2.10.0-enable-spr.patch
+        001-fix-pkgconfig.patch)
 sha256sums=('5ee23abd047636c24b2d43c6625dcafc66661d1aca64dec9e0d05df29592624c'
             'SKIP'
             '30e84993f899b66c31451992667f7ac6cc9e0b19dfe2f47ccb546d77bbc77ef5'
             '0571f18d97834df020e4cbdb1338b14f9160669f868237080951e01f5b86727c'
-            '7cb4175727939e5ea456dc91051c4681a72bc4e2618d43d57313bb68a13f581b')
+            'bf3c223d80cfe1732d93670e3e1f4249f54d608c4a4dedc336c41f877c2d723e')
 validpgpkeys=('E30674707856409FF1948010BE6C3AAC63AD8E3F') # Werner Lemberg <wl@gnu.org>
 
 # Helper macros to help make tasks easier #
@@ -46,46 +46,39 @@ apply_patch_with_msg() {
 }
 
 prepare() {
-  cd "${srcdir}/freetype-${pkgver}"
+  cd "${srcdir}/${_realname}-${_ver}"
 
   apply_patch_with_msg \
     freetype-2.10.0-enable-valid.patch \
     freetype-2.10.0-enable-spr.patch \
-    253.patch
+    001-fix-pkgconfig.patch
 }
 
 build() {
-  mkdir -p "${srcdir}/build-${MSYSTEM}" && cd "${srcdir}/build-${MSYSTEM}"
+  cd "${srcdir}/${_realname}-${_ver}"
 
   declare -a extra_config
-  if check_option "debug" "n"; then
-    extra_config+=("--buildtype=release")
-  else
-    extra_config+=("--buildtype=debug")
-  fi
-
   if [ "${_with_harfbuzz}" != "yes" ]; then
-    extra_config+=("-Dharfbuzz=disabled")
+    extra_config+=("--with-harfbuzz=no")
   fi
 
   MSYS2_ARG_CONV_EXCL="--prefix=" \
-    meson setup \
+    ./configure \
       --prefix="${MINGW_PREFIX}" \
-      --wrap-mode=nodownload \
-      --auto-features=enabled \
-      --default-library=both \
-      "${extra_config[@]}" \
-      ../${_realname}-${pkgver}
+      --{build,host,target}="${MINGW_CHOST}" \
+      --with-librsvg=no \
+      --with-{zlib,bzip2,png,brotli}=yes \
+      "${extra_config[@]}"
 
-  meson compile
+  make
 }
 
 package () {
-  cd "${srcdir}/build-${MSYSTEM}"
+  cd "${srcdir}/${_realname}-${_ver}"
 
-  DESTDIR="${pkgdir}" meson install
+  make install DESTDIR="${pkgdir}"
 
   # Licenses
-  install -Dm644 "${srcdir}/${_realname}-${pkgver}/docs/GPLv2.TXT"   "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/GPLv2.TXT"
-  install -Dm644 "${srcdir}/${_realname}-${pkgver}/docs/FTL.TXT"     "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/FTL.TXT"
+  install -Dm644 docs/GPLv2.TXT  "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/GPLv2.TXT"
+  install -Dm644 docs/FTL.TXT    "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/FTL.TXT"
 }
