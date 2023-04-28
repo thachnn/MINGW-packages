@@ -1,9 +1,16 @@
 # Maintainer: Alexey Pavlov <Alexpux@gmail.com>
+# Contributor: Thach Nguyen (github.com/thachnn)
+
+_with_runtime="yes"
+_with_docs="no"
 
 _realname=openssl
 pkgbase=mingw-w64-${_realname}
 pkgname=("${MINGW_PACKAGE_PREFIX}-${_realname}")
-pkgver=3.1.0
+_ver=3.1.0
+pkgver=$_ver
+[ "$_with_runtime" = "only" ] && pkgver="$pkgver.runtime" || \
+[ "$_with_runtime" = "yes" ] || pkgver="$pkgver.devel"
 pkgrel=1
 pkgdesc="The Open Source toolkit for Secure Sockets Layer and Transport Layer Security (mingw-w64)"
 arch=('any')
@@ -11,17 +18,18 @@ mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64' 'clang32' 'clangarm64')
 url='https://www.openssl.org/'
 license=("spdx:Apache-2.0")
 optdepends=("${MINGW_PACKAGE_PREFIX}-ca-certificates")
-makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
-             "${MINGW_PACKAGE_PREFIX}-autotools")
-options=('!buildflags')
-source=("https://www.openssl.org/source/openssl-${pkgver}.tar.gz"{,.asc}
+makedepends=("${MINGW_PACKAGE_PREFIX}-gcc"
+             "autotools")
+# Use mingw cflags instead of configured ones
+options=('strip' 'buildflags')
+source=("https://www.openssl.org/source/${_realname}-${_ver}.tar.gz"{,.asc}
         '001-support-aarch64.patch'
         '002-relocation.patch'
-        'pathtools.c'
-        'pathtools.h')
+        'https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-pathtools/pathtools.c'
+        'https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-pathtools/pathtools.h')
 sha256sums=('aaa925ad9828745c4cad9d9efeb273deca820f2cdcf2c3ac7d7c1212b7c497b4'
             'SKIP'
-            '21b96771b401442570e885c2d5689a359a91e86dcbf5511db3667202b6c1fa8a'
+            '0a259f1a9ee83a71292f27e0140cbcd6aafef2a10d7e4ee67cea78b12ebf4378'
             '5628dd39ab0d3ce4afbb5207bab5d22766abc86a8875b48b6d4d3efd68550e68'
             '08209cbf1633fa92eae7e5d28f95f8df9d6184cc20fa878c99aec4709bb257fd'
             '965d3921ec4fdeec94a2718bc2c85ce5e1a00ea0e499330a554074a7ae15dfc6')
@@ -45,16 +53,11 @@ apply_patch_with_msg() {
 # =========================================== #
 
 prepare() {
-  cd ${srcdir}/${_realname}-${pkgver}
+  cd ${srcdir}/${_realname}-${_ver}
 
   apply_patch_with_msg \
      001-support-aarch64.patch \
      002-relocation.patch
-
-  test ! -d "${startdir}/../mingw-w64-pathtools" || {
-    cmp "${startdir}/../mingw-w64-pathtools/pathtools.c" "${srcdir}/pathtools.c" &&
-    cmp "${startdir}/../mingw-w64-pathtools/pathtools.h" "${srcdir}/pathtools.h"
-  } || exit 1
 
   cp -fHv "${srcdir}"/pathtools.c crypto/
   cp -fHv "${srcdir}"/pathtools.h ./
@@ -63,9 +66,12 @@ prepare() {
 build() {
   mkdir -p "${srcdir}/build-${MSYSTEM}" && cd "${srcdir}/build-${MSYSTEM}"
 
-  # Use mingw cflags instead of hardcoded ones
-  sed -i -e '/^"mingw"/ s/-fomit-frame-pointer -O3 -Wall/-O2 -pipe -Wall -Wp,-D_FORTIFY_SOURCE=2 -fexceptions --param=ssp-buffer-size=4/' \
-    ${srcdir}/${_realname}-${pkgver}/Configurations/10-main.conf
+  if [ "$_with_runtime" = "only" ]; then
+    sed -i 's/ install_dev\b//' "../${_realname}-${_ver}/Configurations/unix-Makefile.tmpl"
+  elif [ "$_with_runtime" != "yes" ]; then
+    sed -i -e 's/nodep build_programs_nodep/nodep/;s/ install_runtime\b//' \
+       "../${_realname}-${_ver}/Configurations/unix-Makefile.tmpl"
+  fi
 
   case "${CARCH}" in
     i?86)
@@ -79,8 +85,9 @@ build() {
       ;;
   esac
 
+  CFLAGS="${CFLAGS/-O2 /}" \
   MSYS2_ARG_CONV_EXCL="--prefix=" \
-  ../"${_realname}-${pkgver}"/Configure \
+  ../"${_realname}-${_ver}"/Configure \
     --prefix="${MINGW_PREFIX}" \
     --libdir=lib \
     --openssldir=etc/ssl \
@@ -95,8 +102,8 @@ build() {
     enable-rfc3779 \
     -DOPENSSLBIN=\"\\\"${MINGW_PREFIX}/bin\\\"\"
 
-  MSYS2_ARG_CONV_EXCL="-DENGINESDIR=;-DMODULESDIR=;-DOPENSSLDIR=;-DINSTALLTOP=;-DOPENSSLBIN=" \
-  make
+  MSYS2_ARG_CONV_EXCL="-DENGINESDIR=;-DMODULESDIR=;-DOPENSSLDIR=;-DOPENSSLBIN=" \
+  make build_sw
 }
 
 check() {
@@ -108,7 +115,11 @@ check() {
 package() {
   cd "${srcdir}/build-${MSYSTEM}"
 
-  make install DESTDIR="${pkgdir}"
+  _targets=install_sw
+  [ "$_with_runtime" != "yes" -a "$_with_runtime" != "only" ] || _targets="$_targets install_ssldirs"
+  [ "$_with_docs" != "yes" ] || _targets="$_targets install_docs"
 
-  install -Dm644 "${srcdir}/${_realname}-${pkgver}/LICENSE.txt" "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/LICENSE"
+  make DESTDIR="${pkgdir}" $_targets
+
+  install -Dm644 "../${_realname}-${_ver}/LICENSE.txt" "${pkgdir}${MINGW_PREFIX}/share/licenses/${_realname}/LICENSE"
 }

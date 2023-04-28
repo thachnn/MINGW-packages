@@ -1,12 +1,39 @@
 --- a/Configurations/10-main.conf
 +++ b/Configurations/10-main.conf
-@@ -1603,6 +1603,18 @@
+@@ -1556,7 +1556,7 @@
+         inherit_from     => [ 'BASE_unix' ],
+         template         => 1,
+         CC               => "gcc",
+-        CFLAGS           => picker(default => "-Wall",
++        cflags           => picker(default => "-Wall",
+                                    debug   => "-g -O0",
+                                    release => "-O3"),
+         cppflags         => combine("-DUNICODE -D_UNICODE -DWIN32_LEAN_AND_MEAN",
+@@ -1573,8 +1573,7 @@
+     },
+     "mingw" => {
+         inherit_from     => [ "mingw-common" ],
+-        CFLAGS           => add(picker(release => "-fomit-frame-pointer")),
+-        cflags           => "-m32",
++        cflags           => add("-m32", picker(release => "-fomit-frame-pointer")),
+         sys_id           => "MINGW32",
+         bn_ops           => add("BN_LLONG"),
+         asm_arch         => 'x86',
+@@ -1693,7 +1592,7 @@
+         # environment. And as mingw64 is always consistent with itself,
+         # Applink is never engaged and can as well be omitted.
+         inherit_from     => [ "mingw-common" ],
+-        cflags           => "-m64",
++        cflags           => add("-m64"),
+         sys_id           => "MINGW64",
+         bn_ops           => add("SIXTY_FOUR_BIT"),
+         asm_arch         => 'x86_64',
+@@ -1602,6 +1601,16 @@
+         shared_rcflag    => "--target=pe-x86-64",
          multilib         => "64",
      },
- 
 +    "mingwarm64" => {
 +        inherit_from     => [ "mingw-common" ],
-+        cflags           => "",
 +        sys_id           => "MINGWARM64",
 +        bn_ops           => add("SIXTY_FOUR_BIT"),
 +        asm_arch         => 'aarch64',
@@ -15,7 +42,6 @@
 +        shared_rcflag    => "",
 +        multilib         => "-arm64",
 +    },
-+
+ 
  #### UEFI
      "UEFI" => {
-         inherit_from     => [ "BASE_unix" ],
