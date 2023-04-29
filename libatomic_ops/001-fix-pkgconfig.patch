@@ -7,7 +7,7 @@
 -  set(includedir "${CMAKE_INSTALL_FULL_INCLUDEDIR}")
 -  set(libdir "${CMAKE_INSTALL_FULL_LIBDIR}")
 +  set(includedir "\${prefix}/${CMAKE_INSTALL_INCLUDEDIR}")
-+  set(libdir "\${prefix}/${CMAKE_INSTALL_LIBDIR}")
++  set(libdir "\${exec_prefix}/${CMAKE_INSTALL_LIBDIR}")
    string(REPLACE ";" " " THREADDLLIBS "${THREADDLLIBS_LIST}")
    # PACKAGE_VERSION is defined above.
    configure_file(pkgconfig/atomic_ops.pc.in pkgconfig/atomic_ops.pc @ONLY)
