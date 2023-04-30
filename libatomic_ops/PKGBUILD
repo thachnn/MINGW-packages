@@ -11,8 +11,8 @@ arch=('any')
 mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64' 'clang32' 'clangarm64')
 url="https://www.hboehm.info/gc"
 license=('spdx:GPL-2.0' 'spdx:MIT')
-makedepends=("${MINGW_PACKAGE_PREFIX}-gcc"
-             "autotools")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             )
 source=("https://github.com/ivmai/${_realname}/releases/download/v${pkgver}/${_realname}-${pkgver}.tar.gz"
         001-fix-pkgconfig.patch)
 sha256sums=('15676e7674e11bda5a7e50a73f4d9e7d60452271b8acf6fd39a71fefdf89fa31'
@@ -27,10 +27,6 @@ build() {
   mkdir -p ${srcdir}/build-${MSYSTEM} && cd ${srcdir}/build-${MSYSTEM}
 
   declare -a _extra_config
-  if check_option "debug" "y"; then
-    _extra_config+=(CFLAGS="$CFLAGS -g")
-  fi
-
   if [[ ${MSYSTEM} == MINGW64 || ${MSYSTEM} == UCRT64 ]]; then
     _extra_config+=("--disable-atomic-intrinsics")
   fi
@@ -38,7 +34,7 @@ build() {
   MSYS2_ARG_CONV_EXCL="--prefix=" \
   ../"${_realname}-${pkgver}"/configure \
     --prefix="${MINGW_PREFIX}" \
-    --{build,host,target}=${MINGW_CHOST} \
+    --{build,host,target}="${MINGW_CHOST}" \
     --enable-shared \
     "${_extra_config[@]}"
 
