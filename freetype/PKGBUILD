@@ -23,9 +23,8 @@ depends=(
 if [ "${_with_harfbuzz}" == "yes" ]; then
   depends+=("${MINGW_PACKAGE_PREFIX}-harfbuzz")
 fi
-makedepends=("autotools"
-             "${MINGW_PACKAGE_PREFIX}-pkgconf"
-             "${MINGW_PACKAGE_PREFIX}-gcc")
+makedepends=("${MINGW_PACKAGE_PREFIX}-pkg-config"
+             "${MINGW_PACKAGE_PREFIX}-cc")
 source=(https://download-mirror.savannah.gnu.org/releases/freetype/${_realname}-${_ver}.tar.xz{,.sig}
         https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-freetype/freetype-2.10.0-enable-valid.patch
         https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-freetype/freetype-2.10.0-enable-spr.patch
@@ -59,10 +58,6 @@ build() {
   cd "${srcdir}/${_realname}-${_ver}"
 
   declare -a extra_config
-  if check_option "debug" "y"; then
-    extra_config+=(CFLAGS="$CFLAGS -g")
-  fi
-
   if [ "${_with_harfbuzz}" != "yes" ]; then
     extra_config+=("--with-harfbuzz=no")
   fi
@@ -70,9 +65,7 @@ build() {
   MSYS2_ARG_CONV_EXCL="--prefix=" \
     ./configure \
       --prefix="${MINGW_PREFIX}" \
-      --build=${MINGW_CHOST} \
-      --host=${MINGW_CHOST} \
-      --target=${MINGW_CHOST} \
+      --{build,host,target}="${MINGW_CHOST}" \
       --with-librsvg=no \
       --with-{zlib,bzip2,png,brotli}=yes \
       "${extra_config[@]}"
