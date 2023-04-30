@@ -20,10 +20,10 @@ pkgdesc="The Open Source toolkit for Secure Sockets Layer and Transport Layer Se
 optdepends=("${MINGW_PACKAGE_PREFIX}-ca-certificates")
 depends=(
          "${MINGW_PACKAGE_PREFIX}-zlib")
-makedepends=("autotools"
-             "${MINGW_PACKAGE_PREFIX}-gcc")
+makedepends=("${MINGW_PACKAGE_PREFIX}-autotools"
+             "${MINGW_PACKAGE_PREFIX}-cc")
 # Use mingw cflags instead of configured ones
-options=('strip' 'buildflags' 'staticlibs')
+options=('strip' '!buildflags' 'staticlibs' '!debug')
 license=('custom:BSD')
 url="https://www.openssl.org"
 source=(https://www.openssl.org/source/${_realname}-${_ver}.tar.gz{,.asc}
