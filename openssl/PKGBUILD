@@ -18,10 +18,10 @@ mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64' 'clang32' 'clangarm64')
 url='https://www.openssl.org/'
 license=("spdx:Apache-2.0")
 optdepends=("${MINGW_PACKAGE_PREFIX}-ca-certificates")
-makedepends=("${MINGW_PACKAGE_PREFIX}-gcc"
-             "autotools")
+makedepends=("${MINGW_PACKAGE_PREFIX}-cc"
+             "${MINGW_PACKAGE_PREFIX}-autotools")
 # Use mingw cflags instead of configured ones
-options=('strip' 'buildflags')
+options=('strip' '!buildflags' '!debug')
 source=("https://www.openssl.org/source/${_realname}-${_ver}.tar.gz"{,.asc}
         '001-support-aarch64.patch'
         '002-relocation.patch'
