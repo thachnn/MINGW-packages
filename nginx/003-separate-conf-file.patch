@@ -1,0 +1,55 @@
+--- a/conf/nginx.conf
++++ b/conf/nginx.conf
+@@ -2,6 +2,6 @@
+ #user  nobody;
+-worker_processes  1;
++worker_processes  auto;
+ 
+ #error_log  logs/error.log;
+-#error_log  logs/error.log  notice;
++error_log  logs/error.log  notice;
+ #error_log  logs/error.log  info;
+@@ -20,7 +20,7 @@ http {
+ 
+-    #log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+-    #                  '$status $body_bytes_sent "$http_referer" '
+-    #                  '"$http_user_agent" "$http_x_forwarded_for"';
++    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
++                      '$status $body_bytes_sent "$http_referer" '
++                      '"$http_user_agent" "$http_x_forwarded_for"';
+ 
+-    #access_log  logs/access.log  main;
++    access_log  logs/access.log  main;
+ 
+@@ -28,2 +28,3 @@ http {
+     #tcp_nopush     on;
++    #server_tokens off;
+ 
+@@ -33,2 +34,3 @@ http {
+     #gzip  on;
++    gzip_vary on;
+ 
+@@ -80,3 +82,2 @@ http {
+ 
+-
+     # another virtual host using mix of IP-, name-, and port-based configuration
+@@ -94,3 +95,2 @@ http {
+ 
+-
+     # HTTPS server
+@@ -115,3 +115,4 @@ http {
+     #}
+-
++    # virtual hosts configs
++    include  http.d/*.conf;
+ }
+--- a/conf/nginx.conf
++++ b/conf/nginx.conf
+@@ -9,4 +9,7 @@ error_log  logs/error.log  notice;
+ #pid        logs/nginx.pid;
+ 
++# load dynamic modules
++include  modules/*.conf;
++
+ 
+ events {
