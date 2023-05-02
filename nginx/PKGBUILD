@@ -13,22 +13,21 @@ url='https://nginx.org'
 license=('spdx:BSD-2-Clause')
 
 depends=("$MINGW_PACKAGE_PREFIX-pcre2"
+         "$MINGW_PACKAGE_PREFIX-openssl<3.0.0"
          "$MINGW_PACKAGE_PREFIX-zlib")
-depends_x86_64=('libssl-1_1-x64.dll')
-depends_i686=('libssl-1_1.dll')
-depends_aarch64=('libssl-1_1.dll')
 makedepends=("$MINGW_PACKAGE_PREFIX-gcc")
 
-backup=('etc/nginx/fastcgi.conf'
-        'etc/nginx/fastcgi_params'
-        'etc/nginx/http.d/default-server.conf'
-        'etc/nginx/http.d/https-server.conf'
-        'etc/nginx/koi-win'
-        'etc/nginx/koi-utf'
-        'etc/nginx/nginx.conf'
-        'etc/nginx/scgi_params'
-        'etc/nginx/uwsgi_params'
-        'etc/nginx/win-utf')
+_etc="${MINGW_PREFIX:1}/etc"
+backup=("$_etc/$_realname/fastcgi.conf"
+        "$_etc/$_realname/fastcgi_params"
+        "$_etc/$_realname/http.d/default.conf"
+        "$_etc/$_realname/http.d/default-ssl.conf"
+        "$_etc/$_realname/koi-win"
+        "$_etc/$_realname/koi-utf"
+        "$_etc/$_realname/nginx.conf"
+        "$_etc/$_realname/scgi_params"
+        "$_etc/$_realname/uwsgi_params"
+        "$_etc/$_realname/win-utf")
 
 source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
         'https://github.com/msys2/MINGW-packages/raw/master/mingw-w64-pathtools/pathtools.c'
@@ -42,18 +41,18 @@ source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
 sha256sums=('d5031d02c28dc53838b8ceebf6a198eb1332c31809b5d7672eb43c365e7cf0b7'
             '08209cbf1633fa92eae7e5d28f95f8df9d6184cc20fa878c99aec4709bb257fd'
             '965d3921ec4fdeec94a2718bc2c85ce5e1a00ea0e499330a554074a7ae15dfc6'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP'
-            'SKIP')
+            '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
+            '7f5e0f38fdbbfa28cf2f1470283b2f43befa9400f9678ea65379da10f9cca0ca'
+            'd27d4acb6e324901fc85cac54ed7aba03b1ee9e74de0315ab6110efb55b0c1d0'
+            '277ee5f2b6fea423f60a46e29f06a53d43667a1be399d457b6d2aea3a4414502'
+            '3b80f30c39d27b3c5b0b31c90d6ae665d56c25cf75a518725aec4b3f234b310a'
+            '8f1afa6eb26b92ba43dc0958ac8bd600a949372b14ecc2852260c6f0dd9b7f44')
 
 # Helper macros to help make tasks easier
 apply_patch_with_msg() {
   for _patch in "$@"; do
     msg2 "Applying $_patch"
-    patch -Nlp1 -i "$srcdir/$_patch"
+    patch -Ntlp1 -i "$srcdir/$_patch" || true
   done
 }
 
@@ -68,17 +67,20 @@ prepare() {
     '005-fallback-log-stderr.patch' \
     '006-support-utf8-filename.patch'
 
-  cp -fHv "$srcdir"/pathtools.* src/os/win32/
+  mkdir -p objs
+  cp -fHv "$srcdir"/pathtools.* objs/
 }
 
 build() {
   cd "$srcdir/$_realname-$_tag"
 
-  MSYS2_ARG_CONV_EXCL='--prefix=;--sbin-path=' \
-  NGX_MACHINE="$CARCH" \
+  MSYS2_ARG_CONV_EXCL='--prefix=;--conf-path=;--sbin-path=' \
+  NGX_MACHINE="$CARCH" CFLAGS= \
   auto/configure \
-    --prefix="$MINGW_PREFIX/var/lib/nginx" \
+    --prefix="$MINGW_PREFIX/var/lib/$_realname" \
+    --conf-path="$MINGW_PREFIX/etc/$_realname/nginx.conf" \
     --sbin-path="$MINGW_PREFIX/bin/nginx.exe" \
+    \
     --http-client-body-temp-path=temp/client_body \
     --http-proxy-temp-path=temp/proxy \
     --http-fastcgi-temp-path=temp/fastcgi \
@@ -88,12 +90,13 @@ build() {
     --crossbuild=win32 \
     --with-cc=gcc \
     --with-cc-opt="$CFLAGS -DFD_SETSIZE=1024 -s -fno-strict-aliasing" \
-    --with-ld-opt="$LDFLAGS -Wl,--gc-sections,--build-id=none -Wl,--exclude-libs=ALL" \
+    --with-ld-opt="$LDFLAGS -Wl,--gc-sections,--build-id=none" \
     --with-{pcre,zlib,openssl}=NONE \
+    \
     --with-http_{v2,realip,addition,sub,dav,stub_status,flv,mp4,gunzip,gzip_static}_module \
     --with-http_{auth_request,random_index,secure_link,slice}_module \
     --with-{mail,stream} \
-    --with-{http,mail,stream}_ssl_module \
+    --with-{http,mail,stream}_ssl_module
 
   make
 }
@@ -101,6 +104,25 @@ build() {
 package() {
   cd "$srcdir/$_realname-$_tag"
   make DESTDIR="$pkgdir" install
+  install -Dm644 objs/libnginx.a "$pkgdir$MINGW_PREFIX/lib/libnginx.a"
 
-  #TODO install -Dm644 "../$_realname-$_ver/LICENSE.txt" "$pkgdir$MINGW_PREFIX/share/licenses/$_realname/LICENSE"
+  # Install docs
+  make -f docs/GNUmakefile changes
+  install -Dm644 -t "$pkgdir$MINGW_PREFIX/share/doc/$_realname/" docs/text/README tmp/*/CHANGES*
+  install -Dm644 docs/text/LICENSE "$pkgdir$MINGW_PREFIX/share/licenses/$_realname/LICENSE"
+
+  install -Dm644 objs/nginx.8 "$pkgdir$MINGW_PREFIX/share/man/man8/nginx.8"
+  cp -Rf contrib "$pkgdir$MINGW_PREFIX/share/$_realname"
+
+  # Missing dirs
+  cd "$pkgdir$MINGW_PREFIX"
+  mkdir -p "etc/$_realname"/{http.d,modules} "var/lib/$_realname/temp" "lib/$_realname/modules"
+  ln -sf "../../../lib/$_realname/modules" "var/lib/$_realname/"
+
+  # Config files
+  cd "etc/$_realname" && rm -f *.default
+  sed -n '/^    # HTTPS /,/^    #}/p' nginx.conf | sed 's/^    //' > http.d/default-ssl.conf && \
+    sed -i '/^    # HTTPS /,/^    #}/d' nginx.conf
+  sed -n '/^    server /,/^    #}/p' nginx.conf  | sed 's/^    //' > http.d/default.conf && \
+    sed -i '/^    server /,/^    #}/d' nginx.conf
 }

@@ -1,0 +1,19 @@
+--- a/auto/cc/gcc
++++ b/auto/cc/gcc
+@@ -178,2 +178,9 @@ if [ ".$CPP" = "." ]; then
+     CPP="$CC -E"
+ fi
++
++# the resource file
++if which windres 2>/dev/null; then
++    NGX_RES="$NGX_OBJS/nginx.rc.o"
++    NGX_RCC="sed -e 's/ icon [a-z ]*/ ICON /;s,\\\\\\+,/,g' $NGX_WIN32_RC | windres -o $NGX_RES \$(CORE_INCS)"
++    MAIN_LINK="$NGX_RES $MAIN_LINK"
++fi
+--- a/auto/make
++++ b/auto/make
+@@ -198,3 +198,3 @@ if test -n "$NGX_RES"; then
+    ngx_res=$NGX_RES
+-else
++elif [ -n "$NGX_RC" ]; then
+    ngx_res="$NGX_RC $NGX_ICONS"

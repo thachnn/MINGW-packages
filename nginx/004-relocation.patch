@@ -1,0 +1,73 @@
+--- a/auto/configure
++++ b/auto/configure
+@@ -83,2 +83,6 @@ fi
+ 
++case "$NGX_SBIN_PATH" in
++    [\\/]*) have=NGX_SBIN_DIR value="\"$(dirname "$NGX_SBIN_PATH")\"" . auto/define ;;
++    *) have=NGX_SBIN_DIR value=NULL . auto/define ;;
++esac
+ have=NGX_SBIN_PATH value="\"$NGX_SBIN_PATH\"" . auto/define
+--- a/auto/make
++++ b/auto/make
+@@ -194,4 +194,8 @@ ngx_modules_c=`echo $NGX_MODULES_C | sed -e "s/\//$ngx_regex_dirsep/g"`
+ ngx_modules_obj=`echo $ngx_modules_c | sed -e "s/\(.*\.\)c/\1$ngx_objext/"`
+ 
++pathtools_c="$NGX_OBJS${ngx_dirsep}pathtools.c"
++pathtools_obj="${pathtools_c/%.c/.$ngx_objext}"
++ngx_all_objs="$pathtools_obj $ngx_all_objs"
++
+ 
+ if test -n "$NGX_RES"; then
+@@ -248,4 +252,7 @@ fi
+ cat << END                                                    >> $NGX_MAKEFILE
+ 
++$pathtools_obj:	\$(CORE_DEPS)$ngx_cont$pathtools_c
++	$ngx_cc -Wno-error=restrict -Wno-stringop-overflow$ngx_tab$ngx_objout$pathtools_obj$ngx_tab$pathtools_c$NGX_AUX
++
+ $ngx_modules_obj:	\$(CORE_DEPS)$ngx_cont$ngx_modules_c
+ 	$ngx_cc$ngx_tab$ngx_objout$ngx_modules_obj$ngx_tab$ngx_modules_c$NGX_AUX
+--- a/auto/os/win32
++++ b/auto/os/win32
+@@ -23,2 +23,3 @@ case "$NGX_CC_NAME" in
+         MAIN_LINK="$MAIN_LINK -Wl,--export-all-symbols"
++        MAIN_LINK="$MAIN_LINK -Wl,--exclude-modules-for-implib=$NGX_OBJS/pathtools.o"
+         MAIN_LINK="$MAIN_LINK -Wl,--out-implib=$NGX_OBJS/libnginx.a"
+--- a/src/core/nginx.c
++++ b/src/core/nginx.c
+@@ -9,4 +9,5 @@
+ #include <ngx_core.h>
+ #include <nginx.h>
++#include "pathtools.h"
+ 
+ 
+@@ -990,5 +991,6 @@ ngx_process_options(ngx_cycle_t *cycle)
+         ngx_str_set(&cycle->conf_prefix, NGX_PREFIX);
+ #endif
+-        ngx_str_set(&cycle->prefix, NGX_PREFIX);
++        cycle->prefix.data = (u_char *) single_path_relocation(NGX_SBIN_DIR, NGX_PREFIX);
++        cycle->prefix.len = ngx_strlen(cycle->prefix.data);
+ 
+ #endif
+@@ -1000,5 +1002,6 @@ ngx_process_options(ngx_cycle_t *cycle)
+ 
+     } else {
+-        ngx_str_set(&cycle->conf_file, NGX_CONF_PATH);
++        cycle->conf_file.data = (u_char *) single_path_relocation(NGX_SBIN_DIR, NGX_CONF_PATH);
++        cycle->conf_file.len = ngx_strlen(cycle->conf_file.data);
+     }
+ 
+--- a/src/core/ngx_log.c
++++ b/src/core/ngx_log.c
+@@ -8,4 +8,5 @@
+ #include <ngx_config.h>
+ #include <ngx_core.h>
++#include "pathtools.h"
+ 
+ 
+@@ -349,5 +350,5 @@ ngx_log_init(u_char *prefix, u_char *error_log)
+         } else {
+ #ifdef NGX_PREFIX
+-            prefix = (u_char *) NGX_PREFIX;
++            prefix = (u_char *) single_path_relocation(NGX_SBIN_DIR, NGX_PREFIX);
+             plen = ngx_strlen(prefix);
+ #else

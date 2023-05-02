@@ -1,0 +1,52 @@
+--- a/auto/configure
++++ b/auto/configure
+@@ -46,3 +46,3 @@ else
+     NGX_SYSTEM=$NGX_PLATFORM
+-    NGX_MACHINE=i386
++    NGX_MACHINE=${NGX_MACHINE:-i386}
+ fi
+--- a/auto/cc/gcc
++++ b/auto/cc/gcc
+@@ -172,2 +172,3 @@ CFLAGS="$CFLAGS -Werror"
+ CFLAGS="$CFLAGS -g"
++[ "$NGX_DEBUG" = YES ] || CFLAGS="${CFLAGS}0"
+ 
+--- a/auto/lib/openssl/conf
++++ b/auto/lib/openssl/conf
+@@ -52,5 +52,5 @@ if [ $OPENSSL != NONE ]; then
+ else
+ 
+-    if [ "$NGX_PLATFORM" != win32 ]; then
++    if [ "$NGX_PLATFORM" != win32 -o -n "$MINGW_PREFIX" ]; then
+ 
+         OPENSSL=NO
+--- a/auto/lib/pcre/conf
++++ b/auto/lib/pcre/conf
+@@ -69,5 +69,5 @@ if [ $PCRE != NONE ]; then
+ else
+ 
+-    if [ "$NGX_PLATFORM" != win32 ]; then
++    if [ "$NGX_PLATFORM" != win32 -o -n "$MINGW_PREFIX" ]; then
+         PCRE=NO
+     fi
+--- a/auto/lib/zlib/conf
++++ b/auto/lib/zlib/conf
+@@ -43,5 +43,5 @@ if [ $ZLIB != NONE ]; then
+ else
+ 
+-    if [ "$NGX_PLATFORM" != win32 ]; then
++    if [ "$NGX_PLATFORM" != win32 -o -n "$MINGW_PREFIX" ]; then
+         ZLIB=NO
+ 
+--- a/auto/lib/libxslt/conf
++++ b/auto/lib/libxslt/conf
+@@ -14,3 +14,3 @@
+                       #include <libxslt/xsltutils.h>"
+-    ngx_feature_path="/usr/include/libxml2"
++    ngx_feature_path="${MINGW_PREFIX:-/usr}/include/libxml2"
+     ngx_feature_libs="-lxml2 -lxslt"
+@@ -102,3 +102,3 @@ fi
+     ngx_feature_incs="#include <libexslt/exslt.h>"
+-    ngx_feature_path="/usr/include/libxml2"
++    ngx_feature_path="${MINGW_PREFIX:-/usr}/include/libxml2"
+     ngx_feature_libs="-lexslt"

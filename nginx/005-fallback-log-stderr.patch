@@ -1,0 +1,57 @@
+--- a/src/http/modules/ngx_http_log_module.c
++++ b/src/http/modules/ngx_http_log_module.c
+@@ -1180,4 +1180,5 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+     ngx_http_log_loc_conf_t *prev = parent;
+     ngx_http_log_loc_conf_t *conf = child;
++    ngx_str_t               name;
+ 
+     ngx_http_log_t            *log;
+@@ -1221,5 +1222,11 @@ ngx_http_log_merge_loc_conf(ngx_conf_t *cf, void *parent, void *child)
+     log->file = ngx_conf_open_file(cf->cycle, &ngx_http_access_log);
+     if (log->file == NULL) {
+-        return NGX_CONF_ERROR;
++        // fall back to stderr
++        ngx_str_null(&name);
++        cf->cycle->log_use_stderr = 1;
++        log->file = ngx_conf_open_file(cf->cycle, &name);
++        if (log->file == NULL) {
++            return NGX_CONF_ERROR;
++        }
+     }
+ 
+@@ -1283,5 +1290,15 @@ ngx_http_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ 
+ 
+-    if (ngx_strncmp(value[1].data, "syslog:", 7) == 0) {
++    if (ngx_strcmp(value[1].data, "stderr") == 0) {
++        ngx_str_null(&name);
++        cf->cycle->log_use_stderr = 1;
++
++        log->file = ngx_conf_open_file(cf->cycle, &name);
++        if (log->file == NULL) {
++            return NGX_CONF_ERROR;
++        }
++
++        goto process_formats;
++    } else if (ngx_strncmp(value[1].data, "syslog:", 7) == 0) {
+ 
+         peer = ngx_pcalloc(cf->pool, sizeof(ngx_syslog_peer_t));
+--- a/src/stream/ngx_stream_log_module.c
++++ b/src/stream/ngx_stream_log_module.c
+@@ -1015,5 +1015,15 @@ ngx_stream_log_set_log(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
+ 
+ 
+-    if (ngx_strncmp(value[1].data, "syslog:", 7) == 0) {
++    if (ngx_strcmp(value[1].data, "stderr") == 0) {
++        ngx_str_null(&name);
++        cf->cycle->log_use_stderr = 1;
++
++        log->file = ngx_conf_open_file(cf->cycle, &name);
++        if (log->file == NULL) {
++            return NGX_CONF_ERROR;
++        }
++
++        goto process_formats;
++    } else if (ngx_strncmp(value[1].data, "syslog:", 7) == 0) {
+ 
+         peer = ngx_pcalloc(cf->pool, sizeof(ngx_syslog_peer_t));
