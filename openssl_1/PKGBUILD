@@ -17,6 +17,7 @@ pkgrel=1
 arch=('any')
 mingw_arch=('mingw32' 'mingw64' 'ucrt64' 'clang64' 'clang32' 'clangarm64')
 pkgdesc="The Open Source toolkit for Secure Sockets Layer and Transport Layer Security (mingw-w64)"
+provides=("${MINGW_PACKAGE_PREFIX}-$_realname=$pkgver-$pkgrel")
 optdepends=("${MINGW_PACKAGE_PREFIX}-ca-certificates")
 depends=(
          "${MINGW_PACKAGE_PREFIX}-zlib")
