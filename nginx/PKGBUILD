@@ -91,7 +91,6 @@ build() {
     --with-cc=gcc \
     --with-cc-opt="$CFLAGS -DFD_SETSIZE=1024 -s -fno-strict-aliasing" \
     --with-ld-opt="$LDFLAGS -Wl,--gc-sections,--build-id=none" \
-    --with-{pcre,zlib,openssl}=NONE \
     \
     --with-http_{v2,realip,addition,sub,dav,stub_status,flv,mp4,gunzip,gzip_static}_module \
     --with-http_{auth_request,random_index,secure_link,slice}_module \
@@ -104,7 +103,10 @@ build() {
 package() {
   cd "$srcdir/$_realname-$_tag"
   make DESTDIR="$pkgdir" install
+
   install -Dm644 objs/libnginx.a "$pkgdir$MINGW_PREFIX/lib/libnginx.a"
+  install -Dm644 -t "$pkgdir$MINGW_PREFIX/include/$_realname/" objs/ngx_auto_*.h
+  sed -i -e '$ d;/^$/N;/^\n$/D' "$pkgdir$MINGW_PREFIX/include/$_realname"/*.h
 
   # Install docs
   make -f docs/GNUmakefile changes

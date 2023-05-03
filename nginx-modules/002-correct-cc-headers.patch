@@ -1,0 +1,18 @@
+--- a/auto/configure
++++ b/auto/configure
+@@ -19,2 +19,3 @@ echo > $NGX_AUTOCONF_ERR
+ echo "#define NGX_CONFIGURE \"$NGX_CONFIGURE\"" > $NGX_AUTO_CONFIG_H
++sed -i '1s/.*/#ifndef NGX_CONFIGURE\n&\n#endif/' $NGX_AUTO_CONFIG_H
+ 
+--- a/src/core/ngx_config.h
++++ b/src/core/ngx_config.h
+@@ -11,2 +11,3 @@
+ 
++#include <nginx/ngx_auto_headers.h>
+ #include <ngx_auto_headers.h>
+--- a/src/os/win32/ngx_win32_config.h
++++ b/src/os/win32/ngx_win32_config.h
+@@ -136,2 +136,3 @@ typedef long  time_t;
+ 
++#include <nginx/ngx_auto_config.h>
+ #include <ngx_auto_config.h>

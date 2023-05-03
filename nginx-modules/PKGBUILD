@@ -1,0 +1,115 @@
+# Maintainer: Thach Nguyen (github.com/thachnn)
+
+_realname=nginx
+pkgbase="mingw-w64-$_realname"
+_mods=('http-xslt-filter' libxslt '' 'Nginx filter module that transforms XML responses using XSLT stylesheets'
+       'http-geoip' geoip '' 'Nginx module that creates variables depending on the client IP address'
+       'stream-geoip' geoip '' 'Nginx module that creates variables with values depending on the client IP address'
+       'http-image-filter' libgd '' 'Nginx filter module that transforms images in JPEG, GIF, PNG, and WebP formats'
+       #'http-perl' perl '' 'Nginx module to implement location/variable handlers in Perl and insert Perl calls into SSI'
+       'http-headers-more' '' 'git+https://github.com/openresty/headers-more-nginx-module#tag=v0.33'
+         'Nginx third-party module (v0.33) to set, add, and clear arbitrary output headers'
+       'http-dav-ext' libxml2 'git+https://github.com/arut/nginx-dav-ext-module#tag=v3.0.0'
+         'Nginx third-party module (v3.0.0) that supports WebDAV PROPFIND,OPTIONS,LOCK,UNLOCK')
+_mcols=4
+_mlength=${#_mods[@]}
+pkgname=()
+for (( _i=0; _i<$_mlength; _i+=$_mcols )); do
+  pkgname+=("$MINGW_PACKAGE_PREFIX-$_realname-mod-${_mods[$_i]}")
+done
+pkgver=1.22.1
+_tag="release-$pkgver"
+pkgrel=1
+arch=(any)
+mingw_arch=(mingw32 mingw64 ucrt64 clang64 clang32 clangarm64)
+url='https://nginx.org'
+license=('spdx:BSD-2-Clause')
+
+depends=("$MINGW_PACKAGE_PREFIX-$_realname")
+for (( _i=1; _i<$_mlength; _i+=$_mcols )); do
+  if [[ -n "${_mods[$_i]}" ]]; then
+    for _x in ${_mods[$_i]}; do depends+=("$MINGW_PACKAGE_PREFIX-$_x"); done
+  fi
+done
+makedepends=("$MINGW_PACKAGE_PREFIX-gcc")
+
+source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
+        '001-fix-build-flags.patch'
+        '002-correct-cc-headers.patch')
+sha256sums=('d5031d02c28dc53838b8ceebf6a198eb1332c31809b5d7672eb43c365e7cf0b7'
+            '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
+            'ee6e525272fd3031861909a91975065931b08e0403e3962821a6d41a10de05cf')
+for (( _i=2; _i<$_mlength; _i+=$_mcols )); do
+  if [[ -n "${_mods[$_i]}" ]]; then
+    source+=("${_mods[$(( $_i-2 ))]}::${_mods[$_i]%?lic=*}"); sha256sums+=('SKIP')
+  fi
+done
+
+# Helper macros to help make tasks easier
+apply_patch_with_msg() {
+  for _patch in "$@"; do
+    msg2 "Applying $_patch"
+    patch -Ntlp1 -i "$srcdir/$_patch" || true
+  done
+}
+
+prepare() {
+  cd "$srcdir/$_realname-$_tag"
+
+  apply_patch_with_msg \
+    '001-fix-build-flags.patch' \
+    '002-correct-cc-headers.patch'
+}
+
+build() {
+  cd "$srcdir/$_realname-$_tag"
+
+  _extra_config=()
+  for (( _i=0; _i<$_mlength; _i+=$_mcols )); do
+    if [[ -n "${_mods[$(( $_i+2 ))]}" ]]; then
+      _extra_config+=("--add-dynamic-module=../${_mods[$_i]}")
+    else
+      _x=${_mods[$_i]/%-xslt-filter/-xslt}
+      _extra_config+=("--with-${_x//-/_}_module=dynamic")
+    fi
+  done
+
+  NGX_MACHINE="$CARCH" CFLAGS= \
+  auto/configure \
+    --crossbuild=win32 \
+    --with-cc=gcc \
+    --with-cc-opt="$CFLAGS -DFD_SETSIZE=1024 -s -fno-strict-aliasing" \
+    --with-ld-opt="$LDFLAGS -Wl,--gc-sections,--build-id=none" \
+    --with-{http_v2_module,mail,stream} \
+    "${_extra_config[@]}"
+
+  make modules
+}
+
+_package() {
+  local i=$1
+  pkgbase="mingw-w64-$_realname-mod-${_mods[$i]}"
+  pkgdesc="${_mods[$(( $i+3 ))]} (mingw-w64)"
+
+  _x="${_mods[$(( $i+2 ))]}"
+  if [[ -n "$_x" ]]; then
+    _x="${_x#[a-z]*+}"; url="${_x%#*}"
+    [[ "$_x" != *'?lic='* ]] || license=("${_x#*?lic=}")
+  fi
+
+  depends=("$MINGW_PACKAGE_PREFIX-$_realname")
+  if [[ -n "${_mods[$(( $i+1 ))]}" ]]; then
+    for _x in ${_mods[$(( $i+1 ))]}; do depends+=("$MINGW_PACKAGE_PREFIX-$_x"); done
+  fi
+
+  cd "$srcdir/$_realname-$_tag"
+  _x="$(echo "objs/ngx_${_mods[$i]//-/_}"*_module.so)"
+
+  install -Dm644 -t "$pkgdir$MINGW_PREFIX/lib/$_realname/modules/" "$_x"
+  install -Dm644 <(echo "load_module  ${_x/#objs/modules};") \
+    "$pkgdir$MINGW_PREFIX/etc/$_realname/modules/${_mods[$i]}.conf"
+}
+
+for (( _i=0; _i<$_mlength; _i+=$_mcols )); do
+  eval "package_$MINGW_PACKAGE_PREFIX-$_realname-mod-${_mods[$_i]}() { _package $_i; }"
+done
