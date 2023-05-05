@@ -16,3 +16,55 @@
  
 +#include <nginx/ngx_auto_config.h>
  #include <ngx_auto_config.h>
+--- a/auto/lib/perl/conf
++++ b/auto/lib/perl/conf
+@@ -30,6 +30,10 @@
+ 
++    _MINGW_ROOT=`cygpath -m $MINGW_PREFIX 2>/dev/null`
++
+     NGX_PM_CFLAGS=`$NGX_PERL -MExtUtils::Embed -e ccopts`
++    NGX_PM_CFLAGS=`echo ${NGX_PM_CFLAGS//\\\\/\/} | sed "s,$_MINGW_ROOT,$MINGW_PREFIX,g"`
+     NGX_PM_LDFLAGS=`$NGX_PERL -MConfig -e 'print $Config{lddlflags}'`
++    NGX_PM_LDFLAGS=`echo ${NGX_PM_LDFLAGS//\\\\/\/} | sed "s,$_MINGW_ROOT,$MINGW_PREFIX,g"`
+ 
+-    NGX_PERL_CFLAGS="$CFLAGS `$NGX_PERL -MExtUtils::Embed -e ccopts`"
++    NGX_PERL_CFLAGS="$CFLAGS $NGX_PM_CFLAGS"
+ 
+@@ -43,2 +47,3 @@
+     ngx_perl_ldopts=`$NGX_PERL -MExtUtils::Embed -e ldopts`
++    ngx_perl_ldopts=`echo ${ngx_perl_ldopts//\\\\/\/} | sed -e "s,\"$_MINGW_ROOT/lib/lib\([^\"/]*\)\.a\",-l\1,g;s,$_MINGW_ROOT,$MINGW_PREFIX,g"`
+ 
+--- a/src/http/modules/perl/nginx.xs
++++ b/src/http/modules/perl/nginx.xs
+@@ -15,2 +15,3 @@
+ #include "XSUB.h"
++#undef write
+ 
+--- a/src/http/modules/perl/Makefile.PL
++++ b/src/http/modules/perl/Makefile.PL
+@@ -19,2 +19,7 @@
+     LDDLFLAGS         => "$ENV{NGX_PM_LDFLAGS}",
++    LDFROM            => '$(OBJECT) ngx_http_perl_module.o -lnginx',
++    macro => {
++        NOOP          => 'true',
++        DEV_NULL      => '> /dev/null'
++    },
+ 
+--- a/auto/lib/perl/make
++++ b/auto/lib/perl/make
+@@ -7,3 +7,3 @@
+ 
+-$NGX_OBJS/src/http/modules/perl/ngx_http_perl_module.o: \\
++$NGX_OBJS/ngx_http_perl_module.so: \\
+ 		$NGX_OBJS/$ngx_perl_module
+@@ -13,2 +13,3 @@
+ 		src/http/modules/perl/ngx_http_perl_module.h \\
++		$NGX_OBJS/src/http/modules/perl/ngx_http_perl_module.o \\
+ 		$NGX_OBJS/src/http/modules/perl/Makefile
+@@ -42,4 +43,6 @@
+ 		$NGX_PERL Makefile.PL \\
++			MAKE="\$(MAKE)" \\
+ 			LIB=$NGX_PERL_MODULES \\
+ 			INSTALLSITEMAN3DIR=$NGX_PERL_MODULES_MAN
++	$NGX_PERL -pi -e 's/^SHELL =/#/m;s,\\\\(?!\$$|"|n\b),/,gm'";s,`cygpath -m $MINGW_PREFIX 2>/dev/null`,$MINGW_PREFIX,g" $NGX_OBJS/src/http/modules/perl/Makefile
+ 
