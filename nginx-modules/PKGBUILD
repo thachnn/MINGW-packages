@@ -8,8 +8,13 @@ _mods=('http-xslt-filter' libxslt '' 'Nginx filter module that transforms XML re
        'http-image-filter' libgd '' 'Nginx filter module that transforms images in JPEG, GIF, PNG, and WebP formats'
        'http-perl' perl '' 'Nginx module to implement location/variable handlers in Perl and insert Perl calls into SSI'
        #
+       'http-echo' '' 'git+https://github.com/openresty/echo-nginx-module#tag=v0.62'
+         'Nginx third-party module (v0.62) for bringing the power of "echo", "sleep", "time" and more to Nginx config file'
        'http-headers-more' '' 'git+https://github.com/openresty/headers-more-nginx-module#tag=v0.33'
          'Nginx third-party module (v0.33) to set, add, and clear arbitrary output headers'
+       'http-geoip2' libmaxminddb 'git+https://github.com/leev/ngx_http_geoip2_module#tag=3.4'
+         'Nginx third-party module (v3.4) that creates variables with values from GeoIP2 DB based on the client IP'
+       'stream-geoip2' libmaxminddb 2 'Nginx third-party module (v3.4) that creates variables from GeoIP2 DB based on the client IP'
        'http-dav-ext' libxml2 'git+https://github.com/arut/nginx-dav-ext-module#tag=v3.0.0'
          'Nginx third-party module (v3.0.0) that supports WebDAV PROPFIND,OPTIONS,LOCK,UNLOCK')
 _mcols=4
@@ -36,13 +41,15 @@ done
 makedepends=("$MINGW_PACKAGE_PREFIX-gcc")
 
 source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
+        '003-fix-external-mods.patch'
         '001-fix-build-flags.patch'
         '002-correct-cc-headers.patch')
 sha256sums=('d5031d02c28dc53838b8ceebf6a198eb1332c31809b5d7672eb43c365e7cf0b7'
+            '39942c601a3e65e97613a3fe940a8d0a988683e36cafb40496e090ad4b16dcd8'
             '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
             'e43bfac51d3542ef027a9a05ad748ae0c5fb51ab173b2dd777f998394f7ec2ae')
 for (( _i=2; _i<$_mlength; _i+=$_mcols )); do
-  if [[ -n "${_mods[$_i]}" ]]; then
+  if [[ "${_mods[$_i]}" == *'://'* ]]; then
     source+=("${_mods[$(( $_i-2 ))]}::${_mods[$_i]%?lic=*}"); sha256sums+=('SKIP')
   fi
 done
@@ -56,8 +63,11 @@ apply_patch_with_msg() {
 }
 
 prepare() {
-  cd "$srcdir/$_realname-$_tag"
+  cd "$srcdir"
+  apply_patch_with_msg \
+    '003-fix-external-mods.patch'
 
+  cd "$_realname-$_tag"
   apply_patch_with_msg \
     '001-fix-build-flags.patch' \
     '002-correct-cc-headers.patch'
@@ -68,12 +78,13 @@ build() {
 
   _extra_config=()
   for (( _i=0; _i<$_mlength; _i+=$_mcols )); do
-    if [[ -n "${_mods[$(( $_i+2 ))]}" ]]; then
-      _extra_config+=("--add-dynamic-module=../${_mods[$_i]}")
-    else
-      _x=${_mods[$_i]/%-xslt-filter/-xslt}
-      _extra_config+=("--with-${_x//-/_}_module=dynamic")
-    fi
+    case "${_mods[$(( $_i+2 ))]}" in
+      *'://'*)
+        _extra_config+=("--add-dynamic-module=../${_mods[$_i]}") ;;
+      '')
+        _x="${_mods[$_i]/%-xslt-filter/-xslt}"
+        _extra_config+=("--with-${_x//-/_}_module=dynamic") ;;
+    esac
   done
 
   NGX_MACHINE="$CARCH" CFLAGS= \
@@ -94,6 +105,7 @@ _package() {
   pkgdesc="${_mods[$(( $i+3 ))]} (mingw-w64)"
 
   _x="${_mods[$(( $i+2 ))]}"
+  [[ ! "$_x" =~ ^[0-9]+$ ]] || _x="${_mods[$(( $i-$_x ))]}"
   if [[ -n "$_x" ]]; then
     _x="${_x#[a-z]*+}"; url="${_x%#*}"
     [[ "$_x" != *'?lic='* ]] || license=("${_x#*?lic=}")
@@ -105,15 +117,16 @@ _package() {
   fi
 
   cd "$srcdir/$_realname-$_tag"
-  _x="$(echo "objs/ngx_${_mods[$i]//-/_}"*_module.so)"
+  _x="$(echo "objs/ngx_${_mods[$i]//-/_}"_*module.so)"
 
   install -Dm644 -t "$pkgdir$MINGW_PREFIX/lib/$_realname/modules/" "$_x"
   install -Dm644 <(echo "load_module  ${_x/#objs/modules};") \
     "$pkgdir$MINGW_PREFIX/etc/$_realname/modules/${_mods[$i]}.conf"
 
   case "${_mods[$i]}" in
-    http-perl) make -C objs/src/http/modules/perl DESTDIR="$pkgdir" pure_install \
-      && rm -f "$pkgdir$MINGW_PREFIX/lib"/perl5/*/*/auto/nginx/.packlist ;;
+    http-perl)
+      make -C objs/src/http/modules/perl DESTDIR="$pkgdir" pure_install
+      rm -f "$pkgdir$MINGW_PREFIX/lib"/perl5/*/*/auto/nginx/.packlist ;;
   esac
 }
 

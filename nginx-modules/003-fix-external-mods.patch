@@ -1,0 +1,26 @@
+--- a/http-echo/src/ngx_http_echo_filter.c
++++ b/http-echo/src/ngx_http_echo_filter.c
+@@ -48,3 +48,3 @@ ngx_http_echo_filter_init(ngx_conf_t *cf)
+         dd("top header filter: %ld",
+-           (unsigned long) ngx_http_top_header_filter);
++           (uintptr_t) ngx_http_top_header_filter);
+ 
+@@ -53,3 +53,3 @@ ngx_http_echo_filter_init(ngx_conf_t *cf)
+ 
+-        dd("top body filter: %ld", (unsigned long) ngx_http_top_body_filter);
++        dd("top body filter: %ld", (uintptr_t) ngx_http_top_body_filter);
+ 
+--- a/http-geoip2/ngx_http_geoip2_module.c
++++ b/http-geoip2/ngx_http_geoip2_module.c
+@@ -748,3 +748,3 @@ ngx_http_geoip2_log_handler(ngx_http_request_t *r)
+ 
+-        if (ngx_file_info(database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
++        if (ngx_file_info((u_char *) database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
+             ngx_log_error(NGX_LOG_EMERG, r->connection->log, ngx_errno,
+--- a/http-geoip2/ngx_stream_geoip2_module.c
++++ b/http-geoip2/ngx_stream_geoip2_module.c
+@@ -639,3 +639,3 @@ ngx_stream_geoip2_log_handler(ngx_stream_session_t *s)
+ 
+-        if (ngx_file_info(database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
++        if (ngx_file_info((u_char *) database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
+             ngx_log_error(NGX_LOG_EMERG, s->connection->log, ngx_errno,
