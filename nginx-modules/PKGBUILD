@@ -16,7 +16,16 @@ _mods=('http-xslt-filter' libxslt '' 'Nginx filter module that transforms XML re
          'Nginx third-party module (v3.4) that creates variables with values from GeoIP2 DB based on the client IP'
        'stream-geoip2' libmaxminddb 2 'Nginx third-party module (v3.4) that creates variables from GeoIP2 DB based on the client IP'
        'http-dav-ext' libxml2 'git+https://github.com/arut/nginx-dav-ext-module#tag=v3.0.0'
-         'Nginx third-party module (v3.0.0) that supports WebDAV PROPFIND,OPTIONS,LOCK,UNLOCK')
+         'Nginx third-party module (v3.0.0) that supports WebDAV PROPFIND,OPTIONS,LOCK,UNLOCK'
+       #
+       'devel-kit' '' 'git+https://github.com/vision5/ngx_devel_kit#tag=v0.3.1?lic=BSD-3-Clause'
+         'Nginx third-party module (v0.3.1) that adds additional generic tools for Nginx modules development'
+       'http-array-var' "$_realname-mod-devel-kit" 'git+https://github.com/openresty/array-var-nginx-module#tag=v0.05'
+         'Nginx third-party module (v0.05) that supports array-typed variables for Nginx config file'
+       'http-upload-progress' '' 'git+https://github.com/masterzen/nginx-upload-progress-module#tag=v0.9.2'
+         'Nginx third-party module (v0.9.2) implementing an upload progress system, that monitors RFC1867 POST uploads'
+       rtmp '' 'git+https://github.com/arut/nginx-rtmp-module#tag=v1.2.2'
+         'Nginx third-party module (v1.2.2) that provides Media Streaming Server based on Nginx')
 _mcols=4
 _mlength=${#_mods[@]}
 
@@ -45,7 +54,7 @@ source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
         '001-fix-build-flags.patch'
         '002-correct-cc-headers.patch')
 sha256sums=('d5031d02c28dc53838b8ceebf6a198eb1332c31809b5d7672eb43c365e7cf0b7'
-            '39942c601a3e65e97613a3fe940a8d0a988683e36cafb40496e090ad4b16dcd8'
+            'af09e51a70c14465e778e74b19d7d1abf8909219314dc4537da58b87187d6787'
             '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
             'e43bfac51d3542ef027a9a05ad748ae0c5fb51ab173b2dd777f998394f7ec2ae')
 for (( _i=2; _i<$_mlength; _i+=$_mcols )); do
@@ -104,8 +113,7 @@ _package() {
   pkgbase="mingw-w64-$_realname-mod-${_mods[$i]}"
   pkgdesc="${_mods[$(( $i+3 ))]} (mingw-w64)"
 
-  _x="${_mods[$(( $i+2 ))]}"
-  [[ ! "$_x" =~ ^[0-9]+$ ]] || _x="${_mods[$(( $i-$_x ))]}"
+  _x="${_mods[$(( $i+2 ))]}"; [[ ! "$_x" =~ ^[0-9]+$ ]] || _x="${_mods[$(( $i-$_x ))]}"
   if [[ -n "$_x" ]]; then
     _x="${_x#[a-z]*+}"; url="${_x%#*}"
     [[ "$_x" != *'?lic='* ]] || license=("${_x#*?lic=}")
@@ -117,10 +125,10 @@ _package() {
   fi
 
   cd "$srcdir/$_realname-$_tag"
-  _x="$(echo "objs/ngx_${_mods[$i]//-/_}"_*module.so)"
+  _x="ngx-${_mods[$i]/%-progress/progress}"; _x="${_x/#ngx-devel*/ndk}"; _x=${_x//-/_}
 
-  install -Dm644 -t "$pkgdir$MINGW_PREFIX/lib/$_realname/modules/" "$_x"
-  install -Dm644 <(echo "load_module  ${_x/#objs/modules};") \
+  install -Dm644 -t "$pkgdir$MINGW_PREFIX/lib/$_realname/modules/" "objs/$_x"_*module.so
+  install -Dm644 <(ls -1 "objs/$_x"_*module.so | sed 's/^objs\(.*\)/load_module  modules\1;/') \
     "$pkgdir$MINGW_PREFIX/etc/$_realname/modules/${_mods[$i]}.conf"
 
   case "${_mods[$i]}" in

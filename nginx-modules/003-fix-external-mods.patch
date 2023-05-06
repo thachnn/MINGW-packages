@@ -5,22 +5,91 @@
 -           (unsigned long) ngx_http_top_header_filter);
 +           (uintptr_t) ngx_http_top_header_filter);
  
-@@ -53,3 +53,3 @@ ngx_http_echo_filter_init(ngx_conf_t *cf)
- 
+@@ -54 +54 @@ ngx_http_echo_filter_init(ngx_conf_t *cf)
 -        dd("top body filter: %ld", (unsigned long) ngx_http_top_body_filter);
 +        dd("top body filter: %ld", (uintptr_t) ngx_http_top_body_filter);
- 
 --- a/http-geoip2/ngx_http_geoip2_module.c
 +++ b/http-geoip2/ngx_http_geoip2_module.c
-@@ -748,3 +748,3 @@ ngx_http_geoip2_log_handler(ngx_http_request_t *r)
- 
+@@ -749 +749 @@ ngx_http_geoip2_log_handler(ngx_http_request_t *r)
 -        if (ngx_file_info(database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
 +        if (ngx_file_info((u_char *) database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
-             ngx_log_error(NGX_LOG_EMERG, r->connection->log, ngx_errno,
 --- a/http-geoip2/ngx_stream_geoip2_module.c
 +++ b/http-geoip2/ngx_stream_geoip2_module.c
-@@ -639,3 +639,3 @@ ngx_stream_geoip2_log_handler(ngx_stream_session_t *s)
- 
+@@ -640 +640 @@ ngx_stream_geoip2_log_handler(ngx_stream_session_t *s)
 -        if (ngx_file_info(database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
 +        if (ngx_file_info((u_char *) database->mmdb.filename, &fi) == NGX_FILE_ERROR) {
-             ngx_log_error(NGX_LOG_EMERG, s->connection->log, ngx_errno,
+--- a/http-array-var/config
++++ b/http-array-var/config
+@@ -34,3 +34,3 @@ if test -n "$ngx_module_link"; then
+     ngx_module_srcs="$HTTP_ARRAY_VAR_SRCS"
+-    ngx_module_libs=
++    ngx_module_libs=objs/ndk_http_module.so
+ 
+--- a/rtmp/ngx_rtmp.h
++++ b/rtmp/ngx_rtmp.h
+@@ -20,3 +20,3 @@
+ 
+-#if (NGX_WIN32)
++#ifdef _MSC_VER
+ typedef __int8              int8_t;
+@@ -184,3 +184,3 @@ typedef struct {
+ 
+-#if (NGX_WIN32)
++#ifdef _MSC_VER
+ #pragma warning(push)
+@@ -273,3 +273,3 @@ typedef struct {
+ 
+-#if (NGX_WIN32)
++#ifdef _MSC_VER
+ #pragma warning(pop)
+--- a/rtmp/ngx_rtmp_mp4_module.c
++++ b/rtmp/ngx_rtmp_mp4_module.c
+@@ -34,3 +34,3 @@ static ngx_int_t ngx_rtmp_mp4_reset(ngx_rtmp_session_t *s);
+ 
+-#if (NGX_WIN32)
++#ifdef _MSC_VER
+ #pragma warning(push)
+@@ -117,3 +117,3 @@ typedef struct {
+ 
+-#if (NGX_WIN32)
++#ifdef _MSC_VER
+ #pragma warning(pop)
+--- a/rtmp/ngx_rtmp_record_module.c
++++ b/rtmp/ngx_rtmp_record_module.c
+@@ -517 +517 @@ ngx_rtmp_record_node_open(ngx_rtmp_session_t *s,
+-            file_size = (lo == INVALID_SET_FILE_POINTER ?
++            file_size = (lo == (LONG) INVALID_SET_FILE_POINTER ?
+--- a/rtmp/ngx_rtmp_stat_module.c
++++ b/rtmp/ngx_rtmp_stat_module.c
+@@ -159,5 +159,5 @@ ngx_rtmp_stat_escape(ngx_http_request_t *r, void *data, size_t len)
+ }
+ 
+-#if (NGX_WIN32)
++#ifdef _MSC_VER
+ /*
+  * Fix broken MSVC memcpy optimization for 4-byte data
+--- a/rtmp/ngx_rtmp_exec_module.c
++++ b/rtmp/ngx_rtmp_exec_module.c
+@@ -285,4 +285,5 @@ ngx_module_t  ngx_rtmp_exec_module = {
+ 
+ 
++#if !(NGX_WIN32)
+ static void
+ ngx_rtmp_exec_eval_ctx_cstr(void *sctx, ngx_rtmp_eval_t *e, ngx_str_t *ret)
+@@ -406,6 +407,7 @@ static ngx_rtmp_eval_t * ngx_rtmp_exec_event_eval[] = {
+     ngx_rtmp_exec_event_specific_eval,
+     NULL
+ };
++#endif
+ 
+ 
+ static void *
+--- a/rtmp/ngx_rtmp_auto_push_module.c
++++ b/rtmp/ngx_rtmp_auto_push_module.c
+@@ -12,4 +12,6 @@
+ 
++#if (NGX_HAVE_UNIX_DOMAIN)
+ static ngx_rtmp_publish_pt          next_publish;
+ static ngx_rtmp_delete_stream_pt    next_delete_stream;
++#endif
+ 
