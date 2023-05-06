@@ -8,20 +8,20 @@ _mods=('http-xslt-filter' libxslt '' 'Nginx filter module that transforms XML re
        'http-image-filter' libgd '' 'Nginx filter module that transforms images in JPEG, GIF, PNG, and WebP formats'
        'http-perl' perl '' 'Nginx module to implement location/variable handlers in Perl and insert Perl calls into SSI'
        #
-       'http-echo' '' 'git+https://github.com/openresty/echo-nginx-module#tag=v0.62'
-         'Nginx third-party module (v0.62) for bringing the power of "echo", "sleep", "time" and more to Nginx config file'
-       'http-headers-more' '' 'git+https://github.com/openresty/headers-more-nginx-module#tag=v0.33'
-         'Nginx third-party module (v0.33) to set, add, and clear arbitrary output headers'
+       'http-echo' '' 'git+https://github.com/openresty/echo-nginx-module#tag=v0.63'
+         'Nginx third-party module (v0.63) for bringing the power of "echo", "sleep", "time" and more to Nginx config file'
+       'http-headers-more' '' 'git+https://github.com/openresty/headers-more-nginx-module#tag=v0.34'
+         'Nginx third-party module (v0.34) to set, add, and clear arbitrary output headers'
        'http-geoip2' libmaxminddb 'git+https://github.com/leev/ngx_http_geoip2_module#tag=3.4'
          'Nginx third-party module (v3.4) that creates variables with values from GeoIP2 DB based on the client IP'
        'stream-geoip2' libmaxminddb 2 'Nginx third-party module (v3.4) that creates variables from GeoIP2 DB based on the client IP'
        'http-dav-ext' libxml2 'git+https://github.com/arut/nginx-dav-ext-module#tag=v3.0.0'
          'Nginx third-party module (v3.0.0) that supports WebDAV PROPFIND,OPTIONS,LOCK,UNLOCK'
        #
-       'devel-kit' '' 'git+https://github.com/vision5/ngx_devel_kit#tag=v0.3.1?lic=BSD-3-Clause'
-         'Nginx third-party module (v0.3.1) that adds additional generic tools for Nginx modules development'
-       'http-array-var' "$_realname-mod-devel-kit" 'git+https://github.com/openresty/array-var-nginx-module#tag=v0.05'
-         'Nginx third-party module (v0.05) that supports array-typed variables for Nginx config file'
+       'devel-kit' '' 'git+https://github.com/vision5/ngx_devel_kit#tag=v0.3.2?lic=BSD-3-Clause'
+         'Nginx third-party module (v0.3.2) that adds additional generic tools for Nginx modules development'
+       'http-array-var' "$_realname-mod-devel-kit" 'git+https://github.com/openresty/array-var-nginx-module#tag=v0.06'
+         'Nginx third-party module (v0.06) that supports array-typed variables for Nginx config file'
        'http-upload-progress' '' 'git+https://github.com/masterzen/nginx-upload-progress-module#tag=v0.9.2'
          'Nginx third-party module (v0.9.2) implementing an upload progress system, that monitors RFC1867 POST uploads'
        rtmp '' 'git+https://github.com/arut/nginx-rtmp-module#tag=v1.2.2'
@@ -33,7 +33,7 @@ pkgname=()
 for (( _i=0; _i<$_mlength; _i+=$_mcols )); do
   pkgname+=("$MINGW_PACKAGE_PREFIX-$_realname-mod-${_mods[$_i]}")
 done
-pkgver=1.22.1
+pkgver=1.23.3
 _tag="release-$pkgver"
 pkgrel=1
 arch=(any)
@@ -53,8 +53,8 @@ source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
         '003-fix-external-mods.patch'
         '001-fix-build-flags.patch'
         '002-correct-cc-headers.patch')
-sha256sums=('d5031d02c28dc53838b8ceebf6a198eb1332c31809b5d7672eb43c365e7cf0b7'
-            'af09e51a70c14465e778e74b19d7d1abf8909219314dc4537da58b87187d6787'
+sha256sums=('3f9961f581763a248da5cf6b92b533699f9037f484b57c289c6ee4cf3e57c97a'
+            '56e5e560df3deafd75f363ed006bd97a621a4a1b90eec1861da244a53f472db6'
             '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
             'e43bfac51d3542ef027a9a05ad748ae0c5fb51ab173b2dd777f998394f7ec2ae')
 for (( _i=2; _i<$_mlength; _i+=$_mcols )); do
@@ -105,7 +105,7 @@ build() {
     --with-{http_v2_module,mail,stream} \
     "${_extra_config[@]}"
 
-  make modules
+  make modules || make modules
 }
 
 _package() {
@@ -125,7 +125,7 @@ _package() {
   fi
 
   cd "$srcdir/$_realname-$_tag"
-  _x="ngx-${_mods[$i]/%-progress/progress}"; _x="${_x/#ngx-devel*/ndk}"; _x=${_x//-/_}
+  _x="ngx_${_mods[$i]//-/_}"; _x="${_x/%_progress/progress}"; _x="${_x/#ngx_devel*/ndk}"
 
   install -Dm644 -t "$pkgdir$MINGW_PREFIX/lib/$_realname/modules/" "objs/$_x"_*module.so
   install -Dm644 <(ls -1 "objs/$_x"_*module.so | sed 's/^objs\(.*\)/load_module  modules\1;/') \

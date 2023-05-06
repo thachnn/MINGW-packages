@@ -3,7 +3,7 @@
 _realname=nginx
 pkgbase="mingw-w64-$_realname"
 pkgname=("$MINGW_PACKAGE_PREFIX-$_realname")
-pkgver=1.22.1
+pkgver=1.23.3
 _tag="release-$pkgver"
 pkgrel=1
 pkgdesc='Lightweight HTTP server and IMAP/POP3 proxy server (mingw-w64)'
@@ -38,7 +38,7 @@ source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
         '004-relocation.patch'
         '005-fallback-log-stderr.patch'
         '006-support-utf8-filename.patch')
-sha256sums=('d5031d02c28dc53838b8ceebf6a198eb1332c31809b5d7672eb43c365e7cf0b7'
+sha256sums=('3f9961f581763a248da5cf6b92b533699f9037f484b57c289c6ee4cf3e57c97a'
             '08209cbf1633fa92eae7e5d28f95f8df9d6184cc20fa878c99aec4709bb257fd'
             '965d3921ec4fdeec94a2718bc2c85ce5e1a00ea0e499330a554074a7ae15dfc6'
             '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
