@@ -33,7 +33,7 @@ pkgname=()
 for (( _i=0; _i<$_mlength; _i+=$_mcols )); do
   pkgname+=("$MINGW_PACKAGE_PREFIX-$_realname-mod-${_mods[$_i]}")
 done
-pkgver=1.23.3
+pkgver=1.23.4
 _tag="release-$pkgver"
 pkgrel=1
 arch=(any)
@@ -53,7 +53,7 @@ source=("https://github.com/nginx/$_realname/archive/$_tag.tar.gz"
         '003-fix-external-mods.patch'
         '001-fix-build-flags.patch'
         '002-correct-cc-headers.patch')
-sha256sums=('3f9961f581763a248da5cf6b92b533699f9037f484b57c289c6ee4cf3e57c97a'
+sha256sums=('6f43c75135e995b4735f80cad82569453e7bbe2f8ece7578408ec9a0c1cbff43'
             '56e5e560df3deafd75f363ed006bd97a621a4a1b90eec1861da244a53f472db6'
             '588ad0fb6371714d3bacdeacda64faa004c23c715886e8fc17d9b5ec3d929f0a'
             'e43bfac51d3542ef027a9a05ad748ae0c5fb51ab173b2dd777f998394f7ec2ae')
@@ -67,7 +67,7 @@ done
 apply_patch_with_msg() {
   for _patch in "$@"; do
     msg2 "Applying $_patch"
-    patch -Ntlp1 -i "$srcdir/$_patch" || true
+    patch -Ntlp1 -i "$srcdir/$_patch"
   done
 }
 
